@@ -70,3 +70,5 @@ src/
 ## License
 
 Apache 2.0，见 [LICENSE](./LICENSE)。
+
+<!-- rebuild trigger: console env configured -->
