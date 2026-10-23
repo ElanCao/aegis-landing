@@ -9,8 +9,8 @@ import { IconChevronDown, IconShield } from "./icons";
 // PRD 12.4 navigation: Products / Solutions / Platform / Resources / Get started,
 // with anchor dropdowns plus language switch and platform sign-in.
 export function Header({ t, locale, linkBase = "" }: { t: MarketingDict; locale: Locale; linkBase?: string }) {
-  // 登录平台指向独立部署的 SaaS 控制台（NEXT_PUBLIC_CONSOLE_URL）。
-  const loginHref = CONSOLE_URL;
+  // 登录平台直达独立部署的 SaaS 控制台登录页（NEXT_PUBLIC_CONSOLE_URL）。
+  const loginHref = `${CONSOLE_URL}/${locale}/login`;
   const docsHref = `/${locale}/docs`;
   // On sub-pages (e.g. /docs) in-page anchor links must point back to the
   // landing page; on the landing page itself they stay relative.
