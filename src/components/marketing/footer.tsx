@@ -42,7 +42,7 @@ export function Footer({ t, locale, linkBase = "" }: { t: MarketingDict; locale:
       title: t.footer.contact,
       links: [
         { label: t.nav.requestDemo, href: "#demo" },
-        { label: t.nav.loginPlatform, href: CONSOLE_URL },
+        { label: t.nav.loginPlatform, href: `${CONSOLE_URL}/${locale}/login` },
       ],
     },
   ];
