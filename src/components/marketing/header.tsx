@@ -47,7 +47,7 @@ export function Header({ t, locale, linkBase = "" }: { t: MarketingDict; locale:
       items: [
         { label: t.nav.docs, href: docsHref },
         { label: t.nav.demoCenter, href: "#demo" },
-        { label: t.nav.changelog, href: "#capabilities" },
+        { label: t.nav.changelog, href: "https://github.com/ElanCao/aegis-community/releases" },
         { label: t.nav.interview, href: interviewHref },
       ],
     },
@@ -91,9 +91,11 @@ export function Header({ t, locale, linkBase = "" }: { t: MarketingDict; locale:
                 <ul className="w-60 rounded-xl border border-slate-200 bg-white p-2 shadow-lg shadow-slate-900/5">
                   {group.items.map((item) => (
                     <li key={item.label + item.href}>
-                      {item.href.startsWith("#") ? (
+                      {item.href.startsWith("#") || item.href.startsWith("http") ? (
                         <a
-                          href={anchor(item.href)}
+                          href={item.href.startsWith("http") ? item.href : anchor(item.href)}
+                          target={item.href.startsWith("http") ? "_blank" : undefined}
+                          rel={item.href.startsWith("http") ? "noopener noreferrer" : undefined}
                           className="block rounded-lg px-3 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900"
                         >
                           {item.label}
