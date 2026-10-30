@@ -58,7 +58,7 @@ export const en: Dictionary = {
     docs: "Documentation",
     demoCenter: "Demo center",
     changelog: "Changelog",
-    interview: "ITD/CIO Interview",
+    interview: "CIO Interview",
     requestDemo: "Request a demo",
     loginPlatform: "Sign in",
   },
@@ -67,6 +67,7 @@ export const en: Dictionary = {
     subtitle:
       "Aegis is an open-core (Apache 2.0) enterprise AI governance platform: the data plane (enterprise proxy) runs fully on-premise — model keys, prompts, and tool parameters never leave your network — while the SaaS control plane is optional, adding unified management, policy sync, billing, and audit aggregation. Community edition is free; a License Key unlocks Pro/Enterprise.",
     ctaPrimary: "Start free with Community",
+    ctaInterview: "CIO Interview",
     ctaSecondary: "See the policy engine",
     trust: [
       "Open-source data plane · Apache 2.0, free Community edition",
@@ -434,11 +435,17 @@ export const en: Dictionary = {
           { value: "sso", label: "SSO integration" },
           { value: "other", label: "Other" },
         ],
+        followup: {
+          when: ["other"],
+          key: "dealBreakersOther",
+          question: "What other hard requirements? (optional)",
+          placeholder: "e.g. commercial cryptography, source-code audit, data-export assessment…",
+        },
       },
       {
         id: "endpointAgents",
         kind: "single",
-        question: "How are AI tools installed on employee computers (e.g. Claude Code, coding assistants) managed today?",
+        question: "How are AI tools installed on employee computers (e.g. Claude Code, WorkBuddy, coding assistants) managed today?",
         options: [
           { value: "unmanaged", label: "Not managed at all" },
           { value: "networkBlock", label: "Blocked at the network layer" },
@@ -448,10 +455,10 @@ export const en: Dictionary = {
       },
       {
         id: "payToday",
-        kind: "multi",
-        question: "Which of these five capabilities would you pay for today?",
-        hint: "Select up to {n}",
-        max: 2,
+        kind: "ranked",
+        question: "Which of these capabilities are you most likely to pay for?",
+        hint: "Tap in priority order, up to {n}",
+        max: 3,
         options: [
           { value: "inventory", label: "Agent inventory & identity" },
           { value: "gateway", label: "Unified gateway & key custody" },
@@ -459,6 +466,12 @@ export const en: Dictionary = {
           { value: "auditBilling", label: "Audit & cost allocation" },
           { value: "maturity", label: "Maturity scoring" },
         ],
+        extra: {
+          key: "otherCapabilities",
+          label: "What other capabilities should the platform offer? Feel free to list them",
+          hint: "Optional",
+          placeholder: "e.g. prompt asset management, AI code audit, model evaluation…",
+        },
       },
       {
         id: "nextMove",
