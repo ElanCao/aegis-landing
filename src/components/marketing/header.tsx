@@ -12,6 +12,7 @@ export function Header({ t, locale, linkBase = "" }: { t: MarketingDict; locale:
   // 登录平台直达独立部署的 SaaS 控制台登录页（NEXT_PUBLIC_CONSOLE_URL）。
   const loginHref = `${CONSOLE_URL}/${locale}/login`;
   const docsHref = `/${locale}/docs`;
+  const interviewHref = `/${locale}/interview`;
   // On sub-pages (e.g. /docs) in-page anchor links must point back to the
   // landing page; on the landing page itself they stay relative.
   const anchor = (href: string) => (href.startsWith("#") && linkBase ? linkBase + href : href);
@@ -47,6 +48,7 @@ export function Header({ t, locale, linkBase = "" }: { t: MarketingDict; locale:
         { label: t.nav.docs, href: docsHref },
         { label: t.nav.demoCenter, href: "#demo" },
         { label: t.nav.changelog, href: "#capabilities" },
+        { label: t.nav.interview, href: interviewHref },
       ],
     },
     {
