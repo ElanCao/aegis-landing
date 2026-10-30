@@ -7,7 +7,7 @@
 // （when 命中主选项时展开，key 作为提交到 /api/interviews 的 answers 键）。
 export type InterviewStep = {
   id: string;
-  kind: "single" | "multi" | "text";
+  kind: "single" | "multi" | "ranked" | "text";
   question: string;
   hint?: string;
   placeholder?: string;
@@ -20,6 +20,8 @@ export type InterviewStep = {
     placeholder?: string;
     options?: { value: string; label: string }[];
   };
+  // 附加班委输入（任何 kind 可用，如 ranked 题的"其它能力"开放框）。
+  extra?: { key: string; label: string; placeholder?: string; hint?: string };
 };
 
 export const zh = {
@@ -79,7 +81,7 @@ export const zh = {
     docs: "产品文档",
     demoCenter: "演示中心",
     changelog: "变更日志",
-    interview: "ITD/CIO 访谈",
+    interview: "CIO 访谈",
     requestDemo: "申请演示",
     loginPlatform: "登录平台",
   },
@@ -89,6 +91,7 @@ export const zh = {
       "Aegis 是开源核心（Apache 2.0）的企业 AI 治理平台：数据面（企业代理）完全在企业内网运行，模型密钥、提示词与工具参数不出域；控制面 SaaS 可选，提供统一管理、策略下发、计费与审计。社区版免费，License Key 解锁 Pro/企业版。",
     ctaPrimary: "免费使用社区版",
     ctaSecondary: "查看策略治理引擎",
+    ctaInterview: "CIO 访谈",
     trust: [
       "开源数据面 · Apache 2.0，社区版免费",
       "数据面完全本地运行，敏感数据不出企业",
@@ -455,11 +458,17 @@ export const zh = {
           { value: "sso", label: "SSO 集成" },
           { value: "other", label: "其他" },
         ],
+        followup: {
+          when: ["other"],
+          key: "dealBreakersOther",
+          question: "其它硬性门槛是？（选填）",
+          placeholder: "例如：国密改造、源码审计、数据出境评估…",
+        },
       },
       {
         id: "endpointAgents",
         kind: "single",
-        question: "员工电脑上安装的 AI 工具（如 Claude Code、编码助手）目前如何管理？",
+        question: "员工电脑上安装的 AI 工具（如 Claude Code、WorkBuddy、编码助手）目前如何管理？",
         options: [
           { value: "unmanaged", label: "完全没管" },
           { value: "networkBlock", label: "网络层封禁" },
@@ -469,10 +478,10 @@ export const zh = {
       },
       {
         id: "payToday",
-        kind: "multi",
-        question: "五项能力里，哪项今天就会付钱？",
-        hint: "最多选择 {n} 项",
-        max: 2,
+        kind: "ranked",
+        question: "如下能力，您最有可能为哪几项付钱？",
+        hint: "按点击顺序排序，最多 {n} 项",
+        max: 3,
         options: [
           { value: "inventory", label: "Agent 台账与身份" },
           { value: "gateway", label: "统一网关与密钥托管" },
@@ -480,6 +489,12 @@ export const zh = {
           { value: "auditBilling", label: "审计与成本分摊" },
           { value: "maturity", label: "成熟度评分" },
         ],
+        extra: {
+          key: "otherCapabilities",
+          label: "平台还应提供哪些能力？也欢迎列出",
+          hint: "选填",
+          placeholder: "例如：Prompt 资产管理、AI 代码审计、模型效果评测…",
+        },
       },
       {
         id: "nextMove",
