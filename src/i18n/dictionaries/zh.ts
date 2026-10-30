@@ -2,6 +2,26 @@
 // no hardcoded user-visible text in components). Keep keys in sync with en.ts.
 // 注意：所有 key 必须与 en.ts 完全一致。
 
+// 引导式访谈步骤的共享形状。zh 字典里的 steps 字面量统一收窄到该类型，
+// 客户端组件按 kind 分发单选 / 多选 / 开放题渲染；followup 为条件追问
+// （when 命中主选项时展开，key 作为提交到 /api/interviews 的 answers 键）。
+export type InterviewStep = {
+  id: string;
+  kind: "single" | "multi" | "text";
+  question: string;
+  hint?: string;
+  placeholder?: string;
+  max?: number;
+  options?: { value: string; label: string }[];
+  followup?: {
+    when: string[];
+    key: string;
+    question: string;
+    placeholder?: string;
+    options?: { value: string; label: string }[];
+  };
+};
+
 export const zh = {
   common: {
     appName: "Aegis",
@@ -59,6 +79,7 @@ export const zh = {
     docs: "产品文档",
     demoCenter: "演示中心",
     changelog: "变更日志",
+    interview: "ITD/CIO 访谈",
     requestDemo: "申请演示",
     loginPlatform: "登录平台",
   },
@@ -247,7 +268,7 @@ export const zh = {
   },
   personas: {
     title: "目标客户收益",
-    cio: { title: "对 CIO/IT", desc: "统一目录、标准身份集成、MCP/Skill 资产治理和运营可见性；用成熟度评分让 AI 治理进入管理层仪表盘。" },
+    cio: { title: "对 CIO/IT", desc: "统一目录、标准身份集成、MCP/Skill 资产治理和运营可见性；用成熟度评分让 AI 治理进入管理层仪表盘。", cta: "5 分钟治理访谈" },
     ciso: { title: "对 CISO/安全", desc: "收敛凭证暴露、影子 AI、越权工具调用与数据出域风险，转化为可验证的策略、审计事件和持续评分。" },
     platform: { title: "对 AI 平台团队", desc: "复用认证、密钥、策略、审批与 MCP 基础设施，加速安全上线，避免每个业务线重复建设。" },
   },
@@ -277,6 +298,197 @@ export const zh = {
     },
     success: "已收到申请。建议提前准备当前 Agent 清单、使用的外部模型、公共 AI 风险事件及最关注的高敏场景。",
     error: "提交失败，请稍后重试。",
+  },
+  interview: {
+    meta: {
+      title: "AI 治理访谈",
+      description:
+        "5 分钟引导式访谈：告诉我们贵司 AI 的使用与治理现状，获取量身定制的治理方案，并解锁 3 个月企业版试用。",
+    },
+    poweredBy: "Powered by Aegis",
+    progress: "第 {x} / {n} 题",
+    prev: "上一题",
+    next: "下一题",
+    finish: "完成",
+    thanks: {
+      title: "感谢您的洞察！",
+      subtitle: "我们正在为您准备更好的治理方案。",
+      formTitle: "联系方式（全部选填）",
+      name: "姓名",
+      email: "邮箱",
+      company: "公司",
+      jobTitle: "职位",
+      emailHint:
+        "留下邮箱，为您开放 3 个月企业版试用（含多数据面仪表盘、策略下发、审计聚合），完成即开通并邮件通知。",
+      submitWithEmail: "提交并开通试用",
+      submitWithoutEmail: "提交访谈",
+      bookDemo: "预约产品演示",
+      error: "提交失败，请稍后重试。",
+      retry: "重试",
+    },
+    success: {
+      title: "提交成功",
+      message: "您的访谈已提交，我们会尽快与您联系。",
+      trialSent: "试用开通邮件已发送至您的邮箱，请查收（含垃圾邮件文件夹）。",
+      backHome: "返回首页",
+    },
+    steps: [
+      {
+        id: "agentUsage",
+        kind: "single",
+        question: "贵司目前有多少团队在使用 AI Agent？",
+        options: [
+          { value: "none", label: "还没开始" },
+          { value: "pilot", label: "1-2 个团队在试点" },
+          { value: "scaled", label: "多个团队已规模化" },
+          { value: "common", label: "已相当普遍" },
+        ],
+      },
+      {
+        id: "builder",
+        kind: "single",
+        question: "这些 Agent 主要是谁在建设？",
+        options: [
+          { value: "businessLines", label: "各业务线自建" },
+          { value: "itCentral", label: "IT 统一建设" },
+          { value: "thirdParty", label: "采购第三方平台" },
+          { value: "mixed", label: "混合都有" },
+        ],
+      },
+      {
+        id: "shadowAI",
+        kind: "single",
+        question: "是否存在员工绕过 IT 直接使用公共 AI 工具？",
+        options: [
+          { value: "widespreadPolicy", label: "普遍存在，主要靠制度约束" },
+          { value: "controlled", label: "存在，已有技术管控" },
+          { value: "rare", label: "很少" },
+          { value: "unknown", label: "不太了解" },
+        ],
+        followup: {
+          when: ["widespreadPolicy", "controlled"],
+          key: "shadowAIMitigation",
+          question: "目前如何应对？（选填）",
+          placeholder: "例如：制度宣贯、上网行为管理、DLP 告警…",
+        },
+      },
+      {
+        id: "incidents",
+        kind: "single",
+        question:
+          "过去 12 个月，贵司是否发生过 AI 使用相关事件（数据外发、密钥泄露、越权调用、成本失控）？",
+        options: [
+          { value: "experienced", label: "亲身经历过" },
+          { value: "heard", label: "听说过" },
+          { value: "none", label: "没有" },
+          { value: "undisclosed", label: "不方便透露" },
+        ],
+      },
+      {
+        id: "topConcerns",
+        kind: "multi",
+        question: "目前最头疼的是？",
+        hint: "最多选择 {n} 项",
+        max: 3,
+        options: [
+          { value: "visibility", label: "使用不可见" },
+          { value: "dataCompliance", label: "数据安全与合规" },
+          { value: "credentials", label: "密钥与权限混乱" },
+          { value: "cost", label: "成本无法归集" },
+          { value: "sprawl", label: "Agent 数量失控" },
+        ],
+      },
+      {
+        id: "currentApproach",
+        kind: "single",
+        question: "目前如何应对？",
+        options: [
+          { value: "selfBuilt", label: "自建网关或代理" },
+          { value: "cloudNative", label: "用云厂商自带能力" },
+          { value: "vendorSolution", label: "采购了安全厂商方案" },
+          { value: "none", label: "还没管" },
+        ],
+        followup: {
+          when: ["selfBuilt"],
+          key: "selfBuiltMaintainers",
+          question: "自建投入：大约几个人在维护？",
+          options: [
+            { value: "soloPartTime", label: "1 人兼职" },
+            { value: "smallTeam", label: "2-3 人" },
+            { value: "dedicatedTeam", label: "一个小团队" },
+            { value: "undisclosed", label: "不愿透露" },
+          ],
+        },
+      },
+      {
+        id: "ownership",
+        kind: "single",
+        question: "AI 治理归谁负责？出问题谁被追责？",
+        options: [
+          { value: "cio", label: "CIO" },
+          { value: "ciso", label: "CISO" },
+          { value: "dataCompliance", label: "数据或合规团队" },
+          { value: "undefined", label: "还没有明确归属" },
+        ],
+      },
+      {
+        id: "budget",
+        kind: "single",
+        question: "2026 年有 AI 治理专项预算吗？",
+        options: [
+          { value: "tier100k", label: "有，10 万级" },
+          { value: "tier500k", label: "有，50 万级" },
+          { value: "tier1m", label: "有，百万级" },
+          { value: "existingBudget", label: "没有，从现有预算挤" },
+          { value: "unknown", label: "不清楚" },
+        ],
+      },
+      {
+        id: "dealBreakers",
+        kind: "multi",
+        question: "引入治理平台的硬性门槛？",
+        options: [
+          { value: "onPrem", label: "私有化部署" },
+          { value: "complianceCert", label: "等保或 ISO 认证" },
+          { value: "xinchuang", label: "信创适配" },
+          { value: "securityReport", label: "安全测评报告" },
+          { value: "sso", label: "SSO 集成" },
+          { value: "other", label: "其他" },
+        ],
+      },
+      {
+        id: "endpointAgents",
+        kind: "single",
+        question: "员工电脑上安装的 AI 工具（如 Claude Code、编码助手）目前如何管理？",
+        options: [
+          { value: "unmanaged", label: "完全没管" },
+          { value: "networkBlock", label: "网络层封禁" },
+          { value: "licensedAccounts", label: "公司统一采购账号" },
+          { value: "proxied", label: "已有代理或网关管控" },
+        ],
+      },
+      {
+        id: "payToday",
+        kind: "multi",
+        question: "五项能力里，哪项今天就会付钱？",
+        hint: "最多选择 {n} 项",
+        max: 2,
+        options: [
+          { value: "inventory", label: "Agent 台账与身份" },
+          { value: "gateway", label: "统一网关与密钥托管" },
+          { value: "mcpControl", label: "MCP 与工具权限管控" },
+          { value: "auditBilling", label: "审计与成本分摊" },
+          { value: "maturity", label: "成熟度评分" },
+        ],
+      },
+      {
+        id: "nextMove",
+        kind: "text",
+        question: "未来 6-12 个月，贵司在 AI 治理上最重要的一个动作是什么？",
+        hint: "选填",
+        placeholder: "例如：完成 Agent 资产盘点、上线统一网关…",
+      },
+    ] as InterviewStep[],
   },
   download: {
     title: "下载企业代理（数据面）",
