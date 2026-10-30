@@ -1,8 +1,9 @@
 import type { MarketingDict } from "./types";
+import type { Locale } from "@/i18n";
 import { IconArrowRight, IconCheck } from "./icons";
 
 // PRD 12.1 Hero: dark navy first screen, dual CTAs + trust summary.
-export function Hero({ t }: { t: MarketingDict }) {
+export function Hero({ t, locale }: { t: MarketingDict; locale: Locale }) {
   return (
     <section id="hero" className="relative overflow-hidden bg-slate-950 text-white">
       <div aria-hidden className="pointer-events-none absolute inset-0">
@@ -60,6 +61,13 @@ export function Hero({ t }: { t: MarketingDict }) {
             className="inline-flex items-center rounded-lg border border-white/20 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
           >
             {t.hero.ctaSecondary}
+          </a>
+          <a
+            href={`/${locale}/interview`}
+            className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/10 px-5 py-2.5 text-sm font-semibold text-blue-200 transition-colors hover:bg-blue-500/20 hover:text-white"
+          >
+            {t.hero.ctaInterview}
+            <IconArrowRight className="h-4 w-4" />
           </a>
         </div>
 
