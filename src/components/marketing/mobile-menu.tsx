@@ -44,9 +44,11 @@ export function MobileMenu({
               <ul className="mt-1.5 space-y-0.5">
                 {group.items.map((item) => (
                   <li key={item.label + item.href}>
-                    {item.href.startsWith("#") ? (
+                    {item.href.startsWith("#") || item.href.startsWith("http") ? (
                       <a
                         href={item.href}
+                        target={item.href.startsWith("http") ? "_blank" : undefined}
+                        rel={item.href.startsWith("http") ? "noopener noreferrer" : undefined}
                         onClick={close}
                         className="block rounded-lg px-2 py-2 text-sm text-slate-700 hover:bg-slate-50"
                       >
