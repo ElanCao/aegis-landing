@@ -60,7 +60,7 @@ export default async function MarketingPage({ params }: RouteProps) {
         <PublicAi t={t} />
         <Scenarios t={t} />
         <Plans t={t} />
-        <Personas t={t} />
+        <Personas t={t} locale={locale} />
         <Principles t={t} />
         <DownloadSection t={t} />
         <DemoSection t={t} locale={locale} />
