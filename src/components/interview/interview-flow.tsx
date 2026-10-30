@@ -20,7 +20,8 @@ function isAnswered(step: InterviewStep, answers: Record<string, string | string
   // 开放选填题（text）无作答也允许继续。
   if (step.kind === "text") return true;
   const value = answers[step.id];
-  if (step.kind === "multi") return Array.isArray(value) && value.length > 0;
+  if (step.kind === "multi" || step.kind === "ranked")
+    return Array.isArray(value) && value.length > 0;
   return typeof value === "string" && value.length > 0;
 }
 
@@ -200,8 +201,16 @@ export function InterviewFlow({ t, locale }: { t: MarketingDict; locale: Locale 
   const singleValue = typeof answers[step.id] === "string" ? (answers[step.id] as string) : "";
   const multiValue = Array.isArray(answers[step.id]) ? (answers[step.id] as string[]) : [];
   const followup = step.followup;
-  const followupVisible =
-    followup && singleValue.length > 0 && followup.when.includes(singleValue) ? followup : undefined;
+  // 单选题按选中值命中；多选/排序题按已选项与 when 的交集命中。
+  const followupVisible = followup
+    ? step.kind === "single"
+      ? singleValue.length > 0 && followup.when.includes(singleValue)
+        ? followup
+        : undefined
+      : multiValue.some((v) => followup.when.includes(v))
+        ? followup
+        : undefined
+    : undefined;
 
   return (
     <Card className="p-6 sm:p-10">
@@ -255,22 +264,29 @@ export function InterviewFlow({ t, locale }: { t: MarketingDict; locale: Locale 
           </ul>
         ) : null}
 
-        {step.kind === "multi" ? (
+        {step.kind === "multi" || step.kind === "ranked" ? (
           <div className="flex flex-wrap gap-2">
             {(step.options ?? []).map((opt) => {
               const selected = multiValue.includes(opt.value);
+              // 排序题：点选顺序即优先级，chip 上显示序号徽章。
+              const rank = step.kind === "ranked" ? multiValue.indexOf(opt.value) + 1 : 0;
               return (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => toggleMulti(step, opt.value)}
                   aria-pressed={selected}
-                  className={`rounded-full border px-4 py-2 text-sm transition-colors ${
+                  className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition-colors ${
                     selected
                       ? "border-blue-700 bg-blue-700 text-white"
                       : "border-slate-300 bg-white text-slate-700 hover:border-blue-400 hover:text-blue-800"
                   }`}
                 >
+                  {rank > 0 ? (
+                    <span className="grid h-5 w-5 place-items-center rounded-full bg-white/25 text-[11px] font-semibold">
+                      {rank}
+                    </span>
+                  ) : null}
                   {opt.label}
                 </button>
               );
@@ -286,6 +302,22 @@ export function InterviewFlow({ t, locale }: { t: MarketingDict; locale: Locale 
             placeholder={step.placeholder}
             className={inputClass}
           />
+        ) : null}
+
+        {step.extra ? (
+          <div className="mt-6">
+            <p className="text-sm font-medium text-slate-700">
+              {step.extra.label}
+              {step.extra.hint ? <span className="ml-1 text-xs font-normal text-slate-400">{step.extra.hint}</span> : null}
+            </p>
+            <textarea
+              value={typeof answers[step.extra.key] === "string" ? (answers[step.extra.key] as string) : ""}
+              onChange={(e) => setSingle(step.extra!.key, e.target.value)}
+              rows={3}
+              placeholder={step.extra.placeholder}
+              className={`${inputClass} mt-2`}
+            />
+          </div>
         ) : null}
 
         {followupVisible ? (
