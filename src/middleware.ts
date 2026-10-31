@@ -10,6 +10,13 @@ const PUBLIC_FILE = /\.[^/]+$/;
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // 常见错链 /cn → /zh（部分外链/输入法习惯使用 cn 作为中文代码）。
+  if (pathname === "/cn" || pathname.startsWith("/cn/")) {
+    const url = req.nextUrl.clone();
+    url.pathname = `/zh${pathname.slice(3)}`;
+    return NextResponse.redirect(url, 308);
+  }
+
   if (
     pathname.startsWith("/api") ||
     pathname.startsWith("/_next") ||
