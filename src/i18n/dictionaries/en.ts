@@ -283,7 +283,7 @@ export const en: Dictionary = {
     meta: {
       title: "AI Governance Interview",
       description:
-        "A 5-minute guided interview: tell us how your company uses and governs AI, get a tailored governance proposal, and unlock a 3-month Enterprise trial.",
+        "A 5-minute guided interview: tell us how your company uses and governs AI, get a tailored governance proposal, and unlock a 3-month Pro trial.",
     },
     poweredBy: "Powered by Aegis",
     progress: "Question {x} of {n}",
@@ -299,7 +299,7 @@ export const en: Dictionary = {
       company: "Company",
       jobTitle: "Job title",
       emailHint:
-        "Leave your email to get a 3-month Enterprise trial (multi-data-plane dashboards, policy sync, audit aggregation) — it activates instantly upon submission and we'll notify you by email.",
+        "Leave your email to get a 3-month Pro trial (multi-data-plane dashboards, policy sync, audit aggregation) — it activates instantly upon submission and we'll notify you by email.",
       submitWithEmail: "Submit & activate trial",
       submitWithoutEmail: "Submit interview",
       bookDemo: "Book a product demo",
