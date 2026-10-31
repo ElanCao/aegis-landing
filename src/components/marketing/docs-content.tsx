@@ -207,6 +207,7 @@ export function DocsBody() {
             [<Code key="v">tenant.plan</Code>, "租户套餐（COMMUNITY / CLOUD_PRO / ENTERPRISE / HOSTED）", "有值", "有值", "有值"],
             [<Code key="v">usage.inputTokens</Code>, "输入 token 计数", <strong key="v">调用前求值，恒为 0</strong>, "恒为 0", "恒为 0"],
             [<Code key="v">usage.outputTokens</Code>, "输出 token 计数", <strong key="v">调用前求值，恒为 0</strong>, "恒为 0", "恒为 0"],
+            [<Code key="v">hour</Code>, "服务器本地小时（0–23，用于时段策略）", "有值", "有值", "有值"],
             [<Code key="v">subject</Code>, "主体标识", "agentId，未识别时为 anonymous", "同左", "当前用户邮箱"],
           ]}
         />
@@ -247,6 +248,7 @@ export function DocsBody() {
             <><Code>model.startsWith('gpt') &amp;&amp; tenant.plan == 'ENTERPRISE'</Code> —— 组合：仅企业版租户可用 gpt 系。</>,
             <><Code>agent.type == 'CLOUD' &amp;&amp; !model.startsWith('glm')</Code> —— 云 Agent 只允许 glm 系（作 DENY 条件即“云 Agent 禁其他模型”）。</>,
             <><Code>matches(model, '^gpt-4o(-[0-9]{4})?$')</Code> —— 正则精确圈定 gpt-4o 及其日期变体。</>,
+            <><Code>hour &gt;= 22 || hour &lt; 8</Code> —— 时段策略：仅夜间命中（配合 DENY 即“夜间禁调”，配合 ALLOW 即“仅夜间放行”）。</>,
             <><Code>contains(lower(model), 'gpt') || contains(lower(model), 'glm')</Code> —— 函数组合，大小写不敏感地匹配多个关键字。</>,
             <><Code>len(model) &gt; 0 &amp;&amp; model != 'internal-only'</Code> —— 排除特定模型。</>,
             <><Code>subject == 'anonymous'</Code> —— 识别未携带 Agent 身份的匿名调用（常作 DENY 条件拒绝匿名）。</>,
