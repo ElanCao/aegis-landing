@@ -306,7 +306,7 @@ export const zh = {
     meta: {
       title: "AI 治理访谈",
       description:
-        "5 分钟引导式访谈：告诉我们贵司 AI 的使用与治理现状，获取量身定制的治理方案，并解锁 3 个月企业版试用。",
+        "5 分钟引导式访谈：告诉我们贵司 AI 的使用与治理现状，获取量身定制的治理方案，并解锁 3 个月 Pro 版试用。",
     },
     poweredBy: "Powered by Aegis",
     progress: "第 {x} / {n} 题",
@@ -322,7 +322,7 @@ export const zh = {
       company: "公司",
       jobTitle: "职位",
       emailHint:
-        "留下邮箱，为您开放 3 个月企业版试用（含多数据面仪表盘、策略下发、审计聚合），完成即开通并邮件通知。",
+        "留下邮箱，为您开放 3 个月 Pro 版试用（含多数据面仪表盘、策略下发、审计聚合），完成即开通并邮件通知。",
       submitWithEmail: "提交并开通试用",
       submitWithoutEmail: "提交访谈",
       bookDemo: "预约产品演示",
