@@ -205,15 +205,17 @@ export function DocsBody() {
             [<Code key="v">agent.id</Code>, "Agent ID", "有值（带 x-aegis-agent 头或令牌绑定时）", "有值", "无"],
             [<Code key="v">agent.type</Code>, "Agent 类型 SHARED / USER_SIDE / CLOUD", "有值", "有值", "无"],
             [<Code key="v">tenant.plan</Code>, "租户套餐（COMMUNITY / CLOUD_PRO / ENTERPRISE / HOSTED）", "有值", "有值", "有值"],
-            [<Code key="v">usage.inputTokens</Code>, "输入 token 计数", <strong key="v">调用前求值，恒为 0</strong>, "恒为 0", "恒为 0"],
-            [<Code key="v">usage.outputTokens</Code>, "输出 token 计数", <strong key="v">调用前求值，恒为 0</strong>, "恒为 0", "恒为 0"],
+            [<Code key="v">usage.inputTokens</Code>, "输入 token 计数（调用前为估算值）", <strong key="v">估算值</strong>, "估算值", "—"],
+            [<Code key="v">usage.outputTokens</Code>, "输出 token 计数（调用前恒为 0）", <strong key="v">0</strong>, "0", "—"],
             [<Code key="v">hour</Code>, "服务器本地小时（0–23，用于时段策略）", "有值", "有值", "有值"],
             [<Code key="v">subject</Code>, "主体标识", "agentId，未识别时为 anonymous", "同左", "当前用户邮箱"],
           ]}
         />
-        <Callout tone="warn">
-          策略在调用上游模型<strong>之前</strong>求值，此时 token 用量尚未产生，因此 <Code>usage.*</Code> 恒为 0——不要用
-          usage 变量做放行判断，token 预算请使用「限流与预算」。未知变量或缺失字段求值为 undefined（安全降级，不会抛错）。
+        <Callout tone="info">
+          策略在调用上游模型<strong>之前</strong>求值：此时 <Code>usage.inputTokens</Code> 为<strong>估算值</strong>（字符法：CJK
+          约 1 token/字，其余约 4 字符/token），适合做「prompt 不超过 10 万 tokens」这类粗粒度阈值——首页示例
+          <Code>model.startsWith('gpt') &amp;&amp; usage.inputTokens &lt; 100000</Code> 中的限制是真实生效的。需要<strong>精确</strong>的
+          token 预算与熔断，请使用「限流与预算」（按调用后真实用量计量）。未知变量或缺失字段求值为 undefined（安全降级，不会抛错）。
         </Callout>
         <H3>运算符</H3>
         <Ul
@@ -479,10 +481,12 @@ export function DocsBody() {
           <Code>budget_exceeded</Code> 是租户当日 token 预算用尽（需开启 budgetHardStop 才会硬断），需管理员调高预算或等零点重置。
         </P>
 
-        <H3>8. usage.inputTokens 写的条件为什么不命中？</H3>
+        <H3>8. usage.inputTokens 在调用前是什么值？</H3>
         <P>
-          策略在调用上游前求值，此时 token 计数尚未产生，usage 变量恒为 0。想用 token 做预算控制，请使用「限流与预算」的
-          dailyTokenBudget；想在表达式里限制调用规模，可以用其他变量（如 tenant.plan、model）组合。
+          策略在调用上游前求值，此时真实 token 计数尚未产生，<Code>usage.inputTokens</Code> 为<strong>估算值</strong>（字符法：CJK
+          约 1 token/字，其余约 4 字符/token），因此「prompt 不超过 N tokens」这类粗粒度阈值是有效且真实生效的（如首页示例
+          <Code>usage.inputTokens &lt; 100000</Code>）。如果需要<strong>精确</strong>的 token 预算与熔断，请使用「限流与预算」的
+          dailyTokenBudget——它按调用后真实用量计量。
         </P>
 
         <H3>9. 桌面模式和集中式模式的认证有什么差别？</H3>
