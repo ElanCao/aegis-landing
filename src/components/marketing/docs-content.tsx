@@ -419,7 +419,7 @@ export function DocsBody() {
           head={["来源", "含义", "来源标识"]}
           rows={[
             ["云端网关", "SaaS 中继处理的调用与判定", <Code key="s">source_relay</Code>],
-            ["企业代理", "连接模式的企业代理（数据面）同步的事件", <Code key="s">source_edge</Code>],
+            ["企业代理", "连接模式的企业代理（治理域）同步的事件", <Code key="s">source_edge</Code>],
             ["独立代理", "社区版独立模式代理本地产生的事件", <Code key="s">source_standalone</Code>],
           ]}
         />
