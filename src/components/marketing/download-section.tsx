@@ -18,9 +18,6 @@ export function DownloadSection({ t }: { t: MarketingDict }) {
             {t.download.artifact}
           </div>
           <>
-            <div className="mt-2 text-2xl font-semibold text-slate-900">
-              {t.download.currentVersion} {release.version}
-            </div>
             {release.notes ? (
               <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-slate-600">
                 <span className="font-medium text-slate-700">{t.download.releaseNotes}: </span>

@@ -1,15 +1,16 @@
 import { Card } from "@/components/ui";
 import type { MarketingDict } from "./types";
 import { Section } from "./section";
-import { IconGauge, IconInfo, IconRadar, IconSliders } from "./icons";
+import { IconGauge, IconInfo, IconRadar, IconShieldCheck } from "./icons";
 
-// PRD 12.4 Public AI control evaluation: reachability / control rate /
-// maturity metric cards + boundary note (no fabricated numbers; PRD 14).
+// Public AI governance evaluation (v0.4): three fact-based lists —
+// reachable / governed / reachable-but-ungoverned. The speculative "control
+// rate" score is retired (it mixed causes Aegis cannot observe).
 export function PublicAi({ t }: { t: MarketingDict }) {
   const cards = [
     { icon: IconRadar, label: t.publicAi.reachability, desc: t.publicAi.reachabilityDesc },
-    { icon: IconSliders, label: t.publicAi.controlRate, desc: t.publicAi.controlRateDesc },
-    { icon: IconGauge, label: t.publicAi.maturity, desc: t.publicAi.maturityDesc },
+    { icon: IconShieldCheck, label: t.publicAi.governedList, desc: t.publicAi.governedListDesc },
+    { icon: IconGauge, label: t.publicAi.ungovernedList, desc: t.publicAi.ungovernedListDesc },
   ];
 
   return (
@@ -22,9 +23,6 @@ export function PublicAi({ t }: { t: MarketingDict }) {
             </span>
             <h3 className="mt-5 font-semibold text-slate-900">{card.label}</h3>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">{card.desc}</p>
-            <div aria-hidden className="mt-6 h-1.5 overflow-hidden rounded-full bg-slate-100">
-              <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-blue-600 to-indigo-500" />
-            </div>
           </Card>
         ))}
       </div>
