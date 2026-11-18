@@ -7,6 +7,7 @@ import { Header } from "@/components/marketing/header";
 import { Footer } from "@/components/marketing/footer";
 import { DocsBody } from "@/components/marketing/docs-content";
 import { DocsBodyEn } from "@/components/marketing/docs-content-en";
+import { DocsToc } from "@/components/marketing/docs-toc";
 
 // Public documentation site (PRD 12 companion): no login required, same visual
 // language as the landing page. Content lives in docs-content.tsx (Chinese-first).
@@ -78,18 +79,13 @@ export default async function DocsPage({ params }: RouteProps) {
 
         {/* Sticky anchor TOC */}
         <nav className="sticky top-16 z-40 border-b border-slate-200 bg-white/85 backdrop-blur supports-[backdrop-filter]:bg-white/75">
-          <div className="no-scrollbar mx-auto flex max-w-4xl gap-1 overflow-x-auto px-6 py-2.5">
-            {NAV_ANCHORS.map((a, i) => (
-              <a
-                key={a.id}
-                href={`#${a.id}`}
-                className="whitespace-nowrap rounded-full px-3 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
-              >
-                <span className="mr-1.5 font-mono text-xs text-slate-400">{String(i + 1).padStart(2, "0")}</span>
-                {t.docs.nav[a.key]}
-              </a>
-            ))}
-          </div>
+          <DocsToc
+            items={NAV_ANCHORS.map((a, i) => ({
+              id: a.id,
+              label: t.docs.nav[a.key],
+              num: String(i + 1).padStart(2, "0"),
+            }))}
+          />
         </nav>
 
         {locale === "en" ? <DocsBodyEn /> : <DocsBody />}
