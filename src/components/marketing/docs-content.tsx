@@ -1,11 +1,9 @@
 import type { ReactNode } from "react";
 
-// Public documentation body (route /{locale}/docs). Copy is Chinese-first per
-// product requirement ("中文文案为主"); section/nav chrome is localized via
-// the dictionaries. Content mirrors the actual enforcement code:
-// packages/shared/src/policy-expr.ts, apps/web/src/lib/policies.ts,
-// apps/web/src/app/api/gateway/v1/core.ts, packages/shared/src/limits.ts,
-// packages/shared/src/ai-guard.ts, packages/shared/src/content-safety.ts.
+// Public documentation body — Chinese (route /zh/docs). Mirrors the CURRENT
+// enforcement code (post v0.3/v0.4): grant-matrix admission owns access,
+// policies are DENY-only, budgets are centralized, loopback anonymity is gone.
+// The English twin lives in docs-content-en.tsx — keep the two in sync.
 
 function H2({ id, children }: { id: string; children: ReactNode }) {
   return (
@@ -94,23 +92,23 @@ export function DocsBody() {
         <P>
           Aegis 模型网关提供三种接入模式，协议均为 OpenAI 兼容（<Code>/v1/chat/completions</Code>）与 Anthropic 兼容（
           <Code>/v1/messages</Code>，含流式）；本地网关另有 <Code>/v1/models</Code> 模型列表端点。把客户端的 baseURL
-          指向任一模式端点即可接入，策略、密钥托管与计量在三种模式下完全一致。
+          指向任一模式端点即可接入，策略、授权矩阵与计量在三种模式下完全一致。
         </P>
         <H3>三种模式的网关端点</H3>
         <Table
           head={["模式", "端点", "适用场景", "认证"]}
           rows={[
             [
-              <strong key="m">桌面拦截（模式一）</strong>,
+              <strong key="m">桌面代理（模式一）</strong>,
               <Code key="u">http://127.0.0.1:8931/v1</Code>,
               "每位用户在自己电脑运行企业代理，同机 Agent（Claude Code、WorkBuddy 等）直连本机网关；密钥与提示词不出本机。",
-              "免认证（仅本机可达）",
+              <>本机调用也必须携带 ak_；首次启动自动签发「本机默认 Agent」密钥（见代理欢迎向导）。</>,
             ],
             [
               <strong key="m">集中式网关（模式二）</strong>,
               <Code key="u">http://&lt;代理IP&gt;:8931/v1</Code>,
               "企业代理部署在服务器并监听局域网地址，全公司统一入口，可挂负载均衡 / VIP；多台代理无状态对等。",
-              "远程调用必须携带 Agent 的 ak_ 密钥（代理本地离线校验）",
+              "远程调用必须携带 Agent 的 ak_ 密钥（Ed25519 签名，代理本地离线校验）",
             ],
             [
               <strong key="m">SaaS 中继（云 Agent）</strong>,
@@ -121,14 +119,14 @@ export function DocsBody() {
           ]}
         />
         <P>
-          集中式端点的确切地址以控制台「网关 → 接入端点」中各企业代理上报的地址为准；默认端口 8931，可在代理设置中修改。
+          集中式端点的确切地址以控制台「治理域管理」中各企业代理上报的地址为准；默认端口 8931，可在代理设置中修改。
         </P>
         <H3>ak_ 密钥</H3>
         <Ul
           items={[
-            <>在控制台「Agent 管理」中对具体 Agent 点击「签发 API 令牌」获得，前缀 <Code>ak_</Code>，仅显示一次，请立即保存。</>,
-            <>以 HTTP Bearer 方式携带；每个 Agent 一把密钥，可按 Agent 轮换、吊销。</>,
-            <>桌面模式（127.0.0.1）无需密钥；集中式与中继模式必须携带，密钥在代理本地离线校验，控制面宕机不影响鉴权。</>,
+            <>在控制台「Agent 管理」中对具体 Agent 点击「轮换令牌」获得；<Code>ak_</Code> 为 Ed25519 签名凭证，含 agentId、治理域、24 小时有效期与唯一 jti，仅显示一次，请立即保存。</>,
+            <>以 HTTP Bearer 方式携带；每个 Agent 一把密钥，可轮换、吊销（吊销随 bootstrap 下发，代理离线也生效）。</>,
+            <>代理内置控制面公钥，<strong>完全离线也能验签</strong>；控制面宕机不影响鉴权——过期凭证在 72 小时宽限内继续放行（伪造/吊销/域停用无宽限）。</>,
           ]}
         />
         <H3>curl 示例（SaaS 中继）</H3>
@@ -143,68 +141,68 @@ export function DocsBody() {
   }'`}
         />
         <P>
-          换成桌面或集中式端点时，仅需替换 URL 并按模式决定是否携带 <Code>Authorization</Code> 头。模型名以「模型秘钥」中凭证的承接模型为准。
+          换成桌面或集中式端点时，仅需替换 URL。模型名以「模型秘钥」中凭证的承接模型为准。
         </P>
       </section>
 
-      {/* ------------------------------ 策略引擎 ------------------------------ */}
+      {/* ------------------------------ 授权矩阵与策略 ------------------------------ */}
       <section className="mt-20">
-        <H2 id="policy">策略引擎</H2>
+        <H2 id="policy">授权矩阵与策略引擎</H2>
         <P>
-          策略由「动作 + 资源 + 主体 + 效果（ALLOW/DENY）+ 可选条件表达式」组成。RBAC 定义“谁可能做什么”，条件表达式（ABAC）
-          在每次调用时基于实时属性进一步收窄。
+          准入的唯一真相是<strong>授权矩阵</strong>：为每个 Agent 显式授予模型、MCP Server、工具与 Skill
+          （Agent 详情页的矩阵编辑器；高风险工具必须逐一枚举授权，不得从服务继承）。策略引擎在准入之后做<strong>条件收窄与
+          DENY 拦截</strong>——不再承担放行职责。
         </P>
-        <H3>9 个动作与执行位置</H3>
+        <P>每次调用的执行顺序（铁律）：</P>
+        <Block
+          lang="text"
+          code={`1. 身份校验   ak_ 验签 → agentId + 治理域
+2. 矩阵准入   该 agent 对该资源有无 grant → 无则 403 not_granted
+3. 策略求值   仅 DENY 与条件收窄 → 命中 403 explicit_deny
+4. 内容安全 / 限流 / 预算（按配置）`}
+        />
+        <H3>8 个策略动作与执行位置</H3>
         <Table
           head={["动作", "含义", "求值位置 / 语义"]}
           rows={[
-            [<Code key="a">model:invoke</Code>, "调用模型", "网关每次调用前实时求值（云端中继 + 企业代理本地离线执行）；default-deny"],
+            [<Code key="a">model:invoke</Code>, "调用模型", "网关每次调用前（云端中继 + 企业代理本地离线）；DENY-only"],
             [<Code key="a">mcp:invoke</Code>, "调用 MCP", "网关 / 企业代理的 MCP 路由（tools/call）；与 tool:execute 同时校验"],
             [<Code key="a">tool:execute</Code>, "执行工具", "网关 / 企业代理；资源为聚合工具名（服务器名__工具名）"],
             [<Code key="a">skill:use</Code>, "使用 Skill", "企业代理本地网关（skill 端点）；资源为 Skill ID"],
             [<Code key="a">mcp:discover</Code>, "发现 MCP", "企业代理（tools/list 发现阶段）"],
             [<Code key="a">agent:register</Code>, "注册 Agent", "控制台；仅 DENY 生效"],
-            [<Code key="a">agent_version:publish</Code>, "发布 Agent 版本", "控制台；仅 DENY 生效"],
             [<Code key="a">audit:export</Code>, "导出审计", "控制台；仅 DENY 生效"],
             [<Code key="a">policy:override</Code>, "变更策略", "控制台；仅 DENY 生效"],
           ]}
         />
         <Callout tone="info">
-          企业代理上没有控制台登录身份，因此只有 EVERYONE 与 AGENT 两类主体的规则在代理生效（AGENT 规则在调用方携带
-          x-aegis-agent 头或由令牌绑定时匹配）；ROLE / USER 主体规则只在控制台生效。
+          企业代理上没有控制台登录身份，只有 EVERYONE 与 AGENT 两类主体的规则在代理生效（AGENT 规则在调用方由签名令牌
+          绑定或携带 x-aegis-agent 头时匹配）；ROLE / USER 主体规则只在控制台生效。
         </Callout>
-        <H3>默认拒绝语义</H3>
+        <H3>策略语义：仅 DENY 生效</H3>
         <Ul
           items={[
-            <>
-              <strong>网关：default-deny。</strong>没有命中任何 ALLOW 即拒绝（403 <Code>policy_denied</Code>，reason=
-              <Code>default_deny</Code>）；同一请求命中 DENY 与 ALLOW 时 <strong>DENY 优先</strong>。
-            </>,
-            <>
-              <strong>控制台：仅 DENY 生效。</strong>管理动作（注册 / 发布 / 导出 / 改策略）默认放行，只有显式 DENY
-              命中才拦截；ALLOW 规则在控制台不授予任何权限。
-            </>,
+            <><strong>放行靠矩阵，不靠策略。</strong>只配置矩阵、不写任何策略 → 调用正常；矩阵未授权 → 403 <Code>not_granted</Code>（与策略无关）。</>,
+            <><strong>策略只有 DENY 有牙齿。</strong>命中 DENY → 403 <Code>explicit_deny</Code>；ALLOW 规则在网关路径上不产生放行效果。同一请求 DENY 优先。</>,
+            <><strong>表达式错误 = fail-closed。</strong>条件求值出错（语法错、未知顶层标识符、类型错误）→ DENY 规则<strong>按命中处理</strong>、ALLOW 规则按不命中处理，错误文本记入审计 <Code>conditionError</Code>——写错的"禁止 GPT"不会静默失效。</>,
+            <><strong>无策略缓存 = 拒绝。</strong>代理拿不到策略缓存时按 default-deny 处理并记 <Code>no_policy_cache</Code>（灰度期除外，见下）。</>,
+            <><strong>灰度（warn）模式</strong>下 DENY 命中只记录不拦截：审计标 <Code>governed:false + wouldDeny:true</Code>，不计入治理覆盖率；灰度需填原因、14 天到期自动切回 enforce。</>,
           ]}
         />
-        <P>
-          <strong>放行示例：</strong>要让所有 Agent 都能调用 gpt-4o，需要在策略页新建一条规则：动作 <Code>model:invoke</Code>、
-          资源 <Code>gpt-4o</Code>（或 <Code>*</Code> 表示全部模型）、主体 <Code>EVERYONE</Code>、效果 <Code>ALLOW</Code>。
-          只建 DENY 规则不会放行任何调用——网关默认拒绝，必须显式 ALLOW。
-        </P>
         <H3>条件表达式完整参考</H3>
         <P>
           条件表达式写在规则的「条件」中（JSON <Code>{"{ expr: \"...\" }"}</Code> 的 expr 字段），每次调用时对本次请求的属性求值。
           表达式为无副作用沙箱语言：支持字符串 / 数字 / 布尔 / null 字面量、点路径变量、运算符、内置函数与括号；
-          没有赋值、三元、逗号序列等语法。
+          没有赋值、三元、逗号序列等语法。保存时服务端强制编译校验，不通过即 400。
         </P>
         <H3>可用变量（按动作与时机）</H3>
         <Table
           head={["变量", "含义", "model:invoke", "mcp / skill / discover", "控制台动作"]}
           rows={[
             [<Code key="v">model</Code>, "请求的模型名", "有值", '空串 ""', '空串 ""'],
-            [<Code key="v">agent.id</Code>, "Agent ID", "有值（带 x-aegis-agent 头或令牌绑定时）", "有值", "无"],
+            [<Code key="v">agent.id</Code>, "Agent ID", "有值（令牌绑定或带 x-aegis-agent 头时）", "有值", "无"],
             [<Code key="v">agent.type</Code>, "Agent 类型 SHARED / USER_SIDE / CLOUD", "有值", "有值", "无"],
-            [<Code key="v">tenant.plan</Code>, "租户套餐（COMMUNITY / CLOUD_PRO / ENTERPRISE / HOSTED）", "有值", "有值", "有值"],
+            [<Code key="v">tenant.plan</Code>, "租户生效套餐（含试用期的 CLOUD_PRO 口径）", "有值", "有值", "有值"],
             [<Code key="v">usage.inputTokens</Code>, "输入 token 计数（调用前为估算值）", <strong key="v">估算值</strong>, "估算值", "—"],
             [<Code key="v">usage.outputTokens</Code>, "输出 token 计数（调用前恒为 0）", <strong key="v">0</strong>, "0", "—"],
             [<Code key="v">hour</Code>, "服务器本地小时（0–23，用于时段策略）", "有值", "有值", "有值"],
@@ -213,9 +211,9 @@ export function DocsBody() {
         />
         <Callout tone="info">
           策略在调用上游模型<strong>之前</strong>求值：此时 <Code>usage.inputTokens</Code> 为<strong>估算值</strong>（字符法：CJK
-          约 1 token/字，其余约 4 字符/token），适合做「prompt 不超过 10 万 tokens」这类粗粒度阈值——首页示例
-          <Code>model.startsWith('gpt') &amp;&amp; usage.inputTokens &lt; 100000</Code> 中的限制是真实生效的。需要<strong>精确</strong>的
-          token 预算与熔断，请使用「限流与预算」（按调用后真实用量计量）。未知变量或缺失字段求值为 undefined（安全降级，不会抛错）。
+          约 1 token/字，其余约 4 字符/token），适合做「prompt 不超过 10 万 tokens」这类粗粒度阈值。需要<strong>精确</strong>的
+          token 预算与熔断，请使用「限流与预算」（按调用后真实用量、控制面统一计数）。未知顶层标识符按错误处理（fail-closed）；
+          已声明对象内的缺失字段求值为 undefined（安全降级，不会抛错）。
         </Callout>
         <H3>运算符</H3>
         <Ul
@@ -247,40 +245,33 @@ export function DocsBody() {
           items={[
             <><Code>model == 'gpt-4o'</Code> —— 精确匹配某个模型。</>,
             <><Code>model.startsWith('gpt')</Code> —— 前缀匹配一族模型。</>,
-            <><Code>model.startsWith('gpt') &amp;&amp; tenant.plan == 'ENTERPRISE'</Code> —— 组合：仅企业版租户可用 gpt 系。</>,
-            <><Code>agent.type == 'CLOUD' &amp;&amp; !model.startsWith('glm')</Code> —— 云 Agent 只允许 glm 系（作 DENY 条件即“云 Agent 禁其他模型”）。</>,
+            <><Code>model.startsWith('gpt') &amp;&amp; tenant.plan == 'ENTERPRISE'</Code> —— 组合：仅企业版租户拦 gpt 系（DENY）。</>,
+            <><Code>agent.type == 'CLOUD' &amp;&amp; !model.startsWith('glm')</Code> —— 云 Agent 禁非 glm 模型（DENY 条件）。</>,
             <><Code>matches(model, '^gpt-4o(-[0-9]{4})?$')</Code> —— 正则精确圈定 gpt-4o 及其日期变体。</>,
-            <><Code>hour &gt;= 22 || hour &lt; 8</Code> —— 时段策略：仅夜间命中（配合 DENY 即“夜间禁调”，配合 ALLOW 即“仅夜间放行”）。</>,
+            <><Code>hour &gt;= 22 || hour &lt; 8</Code> —— 时段策略：仅夜间命中（配合 DENY 即"夜间禁调"）。</>,
             <><Code>contains(lower(model), 'gpt') || contains(lower(model), 'glm')</Code> —— 函数组合，大小写不敏感地匹配多个关键字。</>,
-            <><Code>len(model) &gt; 0 &amp;&amp; model != 'internal-only'</Code> —— 排除特定模型。</>,
             <><Code>subject == 'anonymous'</Code> —— 识别未携带 Agent 身份的匿名调用（常作 DENY 条件拒绝匿名）。</>,
             <><Code>subject == 'zhangsan@corp.com'</Code> —— 控制台动作按用户邮箱限制（如仅拒绝某人导出审计）。</>,
           ]}
         />
-        <H3>DENY 规则：条件不命中即不拦截</H3>
+        <H3>AI 生成策略</H3>
         <P>
-          条件表达式结果为 false、或变量缺失导致比较不成立时，该规则<strong>不命中</strong>：DENY 规则不会拦截。
-          例如 DENY + <Code>model:invoke</Code> + <Code>agent.id == 'agt_xxx'</Code> 只拒绝这一个 Agent，其他 Agent 不受此规则影响
-          （但网关语义下仍需 ALLOW 才放行；控制台语义下无 DENY 命中即放行）。
+          策略页「AI 生成策略」把模糊意图（如"仅允许国产模型""夜间禁止调用 gpt"）翻译为结构化建议（效果 + 条件表达式 + 解释），
+          支持「预览影响」（dry-run：按资源名统计近 7 天匹配调用数，不落库）与「重新生成」。确认创建即走四眼审批流程。
         </P>
-        <H3>表达式语法错误：DENY 规则不生效（fail-closed）</H3>
+        <H3>四眼审批</H3>
         <P>
-          表达式解析或求值出错（括号不配、未知函数、运算符写错等）时，该规则按<strong>不命中</strong>处理——
-          也就是说，<strong>写错了的 DENY 规则不会拦截任何请求</strong>（fail-closed 指的是规则自身被关闭，而不是请求被关闭）。
-          错误文本会记录在审计 <Code>policy_evaluated</Code> 事件的 <Code>conditionError</Code> 字段中，便于排查。
-          网关语义下请求最终仍因 default-deny 需要 ALLOW 才放行；控制台语义下则直接放行。
+          多管理员租户中，策略创建与内容变更进入「待批准」状态（不生效、不下发），必须<strong>另一名</strong>管理员在列表中点「批准」
+          才转为生效；申请人不能自批（服务端强制）。批准动作写入审计。单管理员租户自动生效。
         </P>
-        <Block
-          lang="expr"
-          code={`model.startsWith('gpt'      // 括号未闭合 → 语法错误\n                                  // 该 DENY 规则不生效，conditionError 记入审计\nusage.outputTokens > 0          // 合法但恒为 false（调用前求值）→ 规则永不命中`}
-        />
       </section>
 
       {/* ------------------------------ 内容安全 ------------------------------ */}
       <section className="mt-20">
         <H2 id="content-safety">内容安全</H2>
         <P>
-          内容安全对<strong>每次请求的 messages 文本</strong>做敏感内容检查（当前仅检查请求内容，不扫描响应）。
+          内容安全是<strong>辅助发现</strong>机制，对模型请求 messages 文本、MCP 工具参数与返回值、非流式模型响应做敏感内容检查。
+          定位是概率性发现，不承诺召回率，<strong>不作为数据不出域的支撑论据</strong>；SSE 流式响应不检查。
           云端中继即时生效；企业代理在下次心跳后自动生效；独立模式在代理本地设置中配置。
         </P>
         <H3>检查项</H3>
@@ -298,10 +289,11 @@ export function DocsBody() {
         <Ul
           items={[
             <>
-              <strong>BLOCK（阻断）</strong>：命中即返回 403 <Code>content_blocked</Code>，响应中仅说明命中的检查类别，不回显敏感内容本身。
+              <strong>BLOCK（阻断）</strong>：模型请求命中返回 403 <Code>content_blocked</Code>；MCP 参数/响应命中返回 JSON-RPC
+              <Code>-32005 content_blocked</Code>（不返回部分结果）。响应中仅说明命中的检查类别，不回显敏感内容本身。
             </>,
             <>
-              <strong>AUDIT_ONLY（仅审计）</strong>：放行并在审计中记录命中类别，适合灰度观察自定义规则的误报率。
+              <strong>AUDIT_ONLY（仅审计）</strong>：放行并在审计中记录命中类别（side 标记 mcp_arguments / mcp_result / model_response），适合灰度观察自定义规则的误报率。
             </>,
           ]}
         />
@@ -317,11 +309,11 @@ export function DocsBody() {
           rows={[
             [
               <Code key="c">rpmPerKey</Code>,
-              "每个 API key（ak_）每分钟允许的请求数。超限返回 429 rate_limited，错误信息含建议重试间隔，客户端应退避重试。",
+              "每个 API key（ak_）每分钟允许的请求数。超限返回 429 rate_limited，错误信息含建议重试间隔，客户端应退避重试。按代理实例各自计数（文档口径：限流是每实例的近似值）。",
             ],
             [
               <Code key="c">dailyTokenBudget</Code>,
-              "租户每日 token 预算（输入 + 输出合计）。每日零点重置；计数为各网关进程内存实现（非分布式），云端中继与各企业代理分别计数。",
+              "租户每日 token 预算（输入 + 输出合计），UTC 日界统一重置。控制面统一计数：云端中继按数据库聚合判定；企业代理用 max(本地计数, 控制面上报值) 校准，多实例不会 N 倍绕过。",
             ],
             [
               <Code key="c">budgetHardStop</Code>,
@@ -333,8 +325,8 @@ export function DocsBody() {
         <Ul
           items={[
             <>限流与预算硬断都返回 HTTP 429，但 <Code>error.type</Code> 不同：<Code>rate_limited</Code>（每 key 每分钟）与 <Code>budget_exceeded</Code>（每日预算）。</>,
-            <>收到 <Code>rate_limited</Code> 应等待后重试；收到 <Code>budget_exceeded</Code> 说明当日预算已用尽，应联系管理员调整预算或等待零点重置。</>,
-            <>80% 告警只触发一次（按“首次跨过”判定），用于提前介入，不影响调用。</>,
+            <>收到 <Code>rate_limited</Code> 应等待后重试；收到 <Code>budget_exceeded</Code> 说明当日预算已用尽，应联系管理员调整预算或等待 UTC 零点重置。</>,
+            <>80% 告警只触发一次（按"首次跨过"判定），用于提前介入，不影响调用。</>,
           ]}
         />
       </section>
@@ -344,7 +336,7 @@ export function DocsBody() {
         <H2 id="ai-guard">AI 策略评估</H2>
         <P>
           AI 策略评估在每次模型调用前，用所选「判定模型」对 system 提示词 + 最后一条用户消息做结构化判定，
-          让大模型自身参与治理决策（Jev 式结构化判定）。云端中继即时生效；企业代理在下次心跳后自动生效。
+          让大模型自身参与治理决策（结构化判定 + 置信度）。云端中继即时生效；企业代理在下次心跳后自动生效。
         </P>
         <H3>原理：结构化的判定输出</H3>
         <P>判定 Prompt 要求决策模型只输出一个 JSON 对象：</P>
@@ -382,27 +374,14 @@ export function DocsBody() {
           请求越频繁、判定模型越贵，治理成本越高——建议为判定选择轻量低价模型。
         </P>
         <Callout tone="info">
-          <strong>review 为什么不拦截：</strong>review 是设计上的“观察档”——只打标、不阻断，避免对正常办公的误伤。
+          <strong>review 为什么不拦截：</strong>review 是设计上的"观察档"——只打标、不阻断，避免对正常办公的误伤。
           需要拦截时，判定模型应输出 block，且模式为 BLOCK。
         </Callout>
-        <H3>接入任意 OpenAI 兼容决策端点</H3>
-        <P>
-          判定服务不限于内置供应商目录：模型秘钥支持指向<strong>任意 OpenAI 兼容端点</strong>（如 Jev 等决策服务），
-          网关会按凭证上保存的 Base URL 直连该端点。接入步骤：
-        </P>
-        <Ul
-          items={[
-            <>控制台「模型秘钥 → 添加密钥」，服务商选择「<strong>自定义（OpenAI 兼容）</strong>」；</>,
-            <>填入该决策服务的 Base URL 与 API Key（例如 <Code>https://jev.example.com/v1</Code>）；</>,
-            <>点击「测试连接」，从上游可用列表中勾选判定要用的模型；</>,
-            <>回到「设置 → AI 策略评估」，在「判定模型」下拉中选择该凭证的模型即可。</>,
-          ]}
-        />
         <H3>超时与失败行为</H3>
         <Ul
           items={[
             <>判定超时、上游报错或输出无法解析为 JSON 时，按 failOpen 配置处理：开=放行并记录审计（含 error 与 failOpen 标记）；关=阻断。</>,
-            <>治理路径（策略/内容安全/限流）与模型调用相互独立：判定服务宕机不影响其他治理层生效。</>,
+            <>治理路径（矩阵/策略/内容安全/限流）与模型调用相互独立：判定服务宕机不影响其他治理层生效。</>,
           ]}
         />
       </section>
@@ -411,8 +390,9 @@ export function DocsBody() {
       <section className="mt-20">
         <H2 id="audit">审计与来源</H2>
         <P>
-          每一次策略求值都会留下 <Code>policy_evaluated</Code> 审计事件（含 reason、命中策略名、conditionError）；
-          模型调用、内容命中、限流、预算事件同样入链，形成不可变哈希链，可在控制台「审计」页校验链完整性。
+          每次矩阵准入与策略求值都会留下 <Code>policy_evaluated</Code> 审计事件（含 reason、命中策略名、conditionError、
+          tokenMode、coverage 标记）；模型调用、内容命中、限流、预算、漂移、脱离治理等事件同样入链，形成不可变哈希链
+          （明细与链分表），可在控制台「治理 → 审计」页一键校验链完整性。
         </P>
         <H3>三种事件来源</H3>
         <Table
@@ -423,27 +403,33 @@ export function DocsBody() {
             ["独立代理", "社区版独立模式代理本地产生的事件", <Code key="s">source_standalone</Code>],
           ]}
         />
-        <P>控制台审计页可按来源筛选，便于区分“云端直接发生”与“边缘同步上报”的事件。</P>
+        <P>控制台审计页可按来源筛选；独立模式的事件标记 <Code>governed:false</Code>（无治理模式，明示而非默示）。</P>
+        <H3>治理覆盖率</H3>
+        <P>
+          仪表盘首屏的覆盖率是事实指标：调用维度 = 带 <Code>coverage:true</Code> 标记且 <Code>governed:true</Code> 的调用 /
+          到达网关的调用总数；灰度放行（wouldDeny）与凭证降级（graceReason）单列、不计入分子。代理维度 =
+          心跳健康设备 / 已纳管设备（桌面代理休眠单独计 SLEEPING，不算脱离治理）。
+        </P>
       </section>
 
       {/* ------------------------------ FAQ ------------------------------ */}
       <section className="mt-20">
         <H2 id="faq">常见问题（FAQ）</H2>
 
-        <H3>1. MCP 调用返回 403 policy_denied，怎么办？</H3>
+        <H3>1. MCP 调用 403 / 工具"不存在"，怎么办？</H3>
         <P>
-          网关与代理对 MCP 采用默认拒绝：<Code>mcp:invoke</Code> 与 <Code>tool:execute</Code> 两个动作都需要显式 ALLOW。
-          到「策略」页为该 Agent（或 EVERYONE）新建 ALLOW 规则，动作选 mcp:invoke 与 tool:execute，资源填聚合工具名
-          （形如 <Code>服务器名__工具名</Code>）或 <Code>*</Code>。仅添加 DENY 规则不会放行任何调用。
+          先分清两种拒绝：<Code>403 not_granted</Code> = 授权矩阵未放行（到 MCP 详情给该 Agent 授权；HIGH/CRITICAL
+          工具必须逐一枚举授权）；JSON-RPC <Code>-32601 Unknown tool</Code> = 工具存在但对该 Agent 不可见（设计如此，
+          不泄露存在性）。仅配策略 ALLOW 不会放行——放行只由矩阵决定。
         </P>
 
-        <H3>2. 为什么我的策略没有生效？</H3>
+        <H3>2. 为什么我的 DENY 策略没有拦到调用？</H3>
         <Ul
           items={[
-            <>生效时延：云端中继即时生效；企业代理要等下次心跳（默认约 60 秒）同步策略缓存。</>,
-            <>语义错位：把 ALLOW 规则当成“只读不动”——网关是 default-deny，没有匹配的 ALLOW 一律 403。</>,
-            <>资源名不匹配：大小写敏感，且 MCP 工具要用聚合名（服务器名__工具名）。</>,
-            <>条件表达式结果为 false：用审计里的 conditionError 与 reason 定位。</>,
+            <>执行顺序：矩阵先、策略后。若调用在矩阵层就被 <Code>not_granted</Code> 拒绝，根本走不到策略。</>,
+            <>生效时延：云端中继即时；企业代理等下次心跳（约 60 秒）；多管理员租户的策略可能还在「待批准」。</>,
+            <>资源名不匹配：大小写敏感，MCP 工具要用聚合名（服务器名__工具名）。</>,
+            <>条件不命中或表达式报错：看审计 <Code>policy_evaluated</Code> 的 reason / conditionError（报错按命中处理，会拦截而非放行）。</>,
           ]}
         />
 
@@ -451,9 +437,8 @@ export function DocsBody() {
         <Ul
           items={[
             <>先看「审计」中对应请求的 <Code>policy_evaluated</Code> 事件，<Code>conditionError</Code> 会给出解析错误与位置。</>,
-            <>常见错误：括号不闭合、引号不配、把 <Code>&amp;&amp;</Code> 写成 and、调用不存在的函数。</>,
+            <>常见错误：括号不闭合、引号不配、把 <Code>&amp;&amp;</Code> 写成 and、引用白名单外的顶层标识符（保存时即 400）。</>,
             <><Code>matches()</Code> 的正则非法<strong>不会报错</strong>，只是恒为 false——正则规则不命中时先检查正则本身。</>,
-            <>注意 fail-closed 语义：表达式报错的 DENY 规则不生效（规则被关闭），修好后才会真正拦截。</>,
           ]}
         />
 
@@ -465,40 +450,39 @@ export function DocsBody() {
 
         <H3>5. 如何只给某个 Agent 放开某个模型？</H3>
         <P>
-          新建 ALLOW 规则：动作 <Code>model:invoke</Code>、资源 <Code>该模型名</Code>、主体类型选 AGENT、主体填该 Agent 的 ID。
-          其他 Agent 不受影响（它们仍需自己的 ALLOW）。也可用资源 <Code>*</Code> + 条件 <Code>agent.id == '...'</Code> 达到同样效果。
+          不需要写策略：到「Agent 管理 → 该 Agent → 模型授权」勾选该模型即可（写授权矩阵）。策略只负责在这之后再做 DENY 收窄。
         </P>
 
         <H3>6. 响应缓存与内容安全是什么关系？会不会绕过检查？</H3>
         <P>
-          不会。每个请求都先经过策略、内容安全与 AI 判定，之后才查响应缓存；命中缓存只跳过上游模型调用
+          不会。每个请求都先经过矩阵、策略、内容安全与 AI 判定，之后才查响应缓存；命中缓存只跳过上游模型调用
           （按 0 token、0 成本计量），所有治理检查照常执行。客户端也可用请求头 <Code>x-aegis-no-cache: 1</Code> 跳过缓存强制回源。
         </P>
 
         <H3>7. 收到 429，是限流还是预算用完了？</H3>
         <P>
           看响应体 <Code>error.type</Code>：<Code>rate_limited</Code> 是每 key 每分钟超限，等待错误信息中的间隔后重试即可；
-          <Code>budget_exceeded</Code> 是租户当日 token 预算用尽（需开启 budgetHardStop 才会硬断），需管理员调高预算或等零点重置。
+          <Code>budget_exceeded</Code> 是租户当日 token 预算用尽（需开启 budgetHardStop 才会硬断），需管理员调高预算或等 UTC 零点重置。
         </P>
 
         <H3>8. usage.inputTokens 在调用前是什么值？</H3>
         <P>
           策略在调用上游前求值，此时真实 token 计数尚未产生，<Code>usage.inputTokens</Code> 为<strong>估算值</strong>（字符法：CJK
-          约 1 token/字，其余约 4 字符/token），因此「prompt 不超过 N tokens」这类粗粒度阈值是有效且真实生效的（如首页示例
-          <Code>usage.inputTokens &lt; 100000</Code>）。如果需要<strong>精确</strong>的 token 预算与熔断，请使用「限流与预算」的
-          dailyTokenBudget——它按调用后真实用量计量。
+          约 1 token/字，其余约 4 字符/token），因此「prompt 不超过 N tokens」这类粗粒度阈值是有效且真实生效的。如果需要
+          <strong>精确</strong>的 token 预算与熔断，请使用「限流与预算」的 dailyTokenBudget——它按调用后真实用量、控制面统一计数。
         </P>
 
         <H3>9. 桌面模式和集中式模式的认证有什么差别？</H3>
         <P>
-          桌面模式监听 127.0.0.1，只接受本机连接、免认证，适合个人拦截；集中式模式监听局域网地址，远程调用必须携带
-          ak_ 密钥，由代理本地离线校验——控制面短时不可用也不影响鉴权与策略执行。
+          两种模式的网关都<strong>要求 ak_</strong>（早期版本的回环免认证已下线）。差别在签发方式：桌面代理首次启动自动创建
+          「本机默认 Agent」并签发密钥（欢迎向导展示 endpoint + 密钥 + 客户端配置片段）；集中式模式的 Agent 由控制面注册并签发。
+          无论哪种，验签都在代理本地离线完成。
         </P>
 
         <H3>10. 策略修改后多久生效？</H3>
         <P>
-          云端中继立即生效；企业代理在下次心跳（默认约 60 秒）后生效；独立模式在代理本地配置，保存即生效。
-          下发到代理的策略缓存为空时（从未同步成功）本地请求会放行并标记 cached_empty，连接恢复后自动收敛。
+          云端中继立即生效；企业代理在下次心跳（约 60 秒）后生效；独立模式在代理本地配置，保存即生效。策略缓存缺失时代理按
+          <Code>no_policy_cache</Code> 拒绝（fail-closed），连接恢复后自动收敛。
         </P>
       </section>
     </div>

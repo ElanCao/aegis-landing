@@ -6,6 +6,7 @@ import { isLocale } from "@/i18n/config";
 import { Header } from "@/components/marketing/header";
 import { Footer } from "@/components/marketing/footer";
 import { DocsBody } from "@/components/marketing/docs-content";
+import { DocsBodyEn } from "@/components/marketing/docs-content-en";
 
 // Public documentation site (PRD 12 companion): no login required, same visual
 // language as the landing page. Content lives in docs-content.tsx (Chinese-first).
@@ -77,7 +78,7 @@ export default async function DocsPage({ params }: RouteProps) {
 
         {/* Sticky anchor TOC */}
         <nav className="sticky top-16 z-40 border-b border-slate-200 bg-white/85 backdrop-blur supports-[backdrop-filter]:bg-white/75">
-          <div className="mx-auto flex max-w-4xl gap-1 overflow-x-auto px-6 py-2.5">
+          <div className="no-scrollbar mx-auto flex max-w-4xl gap-1 overflow-x-auto px-6 py-2.5">
             {NAV_ANCHORS.map((a, i) => (
               <a
                 key={a.id}
@@ -91,7 +92,7 @@ export default async function DocsPage({ params }: RouteProps) {
           </div>
         </nav>
 
-        <DocsBody />
+        {locale === "en" ? <DocsBodyEn /> : <DocsBody />}
       </main>
       <Footer t={t} locale={locale} linkBase={`/${locale}`} />
     </div>
